@@ -17,7 +17,7 @@ pLoadLibraryExW rawLoadLibraryExW;
 static void ModifyDll(const std::wstring& path) {
     std::fstream dllFile(path, std::ios::in | std::ios::out | std::ios::binary);
     if (!dllFile.is_open()) {
-        std::wcerr << L"无法打开文件: " << path << std::endl;
+        //std::wcerr << L"无法打开文件: " << path << std::endl;
         return;
     }
 
@@ -45,8 +45,26 @@ static void ModifyDll(const std::wstring& path) {
         0x5D,                         // pop ebp
         0xC3                          // ret
     };
-
     size_t searchSize = sizeof(searchBytes) / sizeof(char);
+
+    char mask[] = {
+        1,
+        1, 1,
+        1, 1, 1,
+        1, 1,
+        1, 1,
+        1, 1, 1,
+        1, 1, 1,
+        1, 0, 0, 0, 0,
+        1, 1,
+        1, 1,
+        1, 1,
+        1,
+        1,
+        1, 1,
+        1,
+        1
+    };
 
     char newBytes[] = {
         0x55,                          // push ebp
@@ -68,24 +86,30 @@ static void ModifyDll(const std::wstring& path) {
     };
     size_t newSize = sizeof(newBytes) / sizeof(char);
 
-    char* pos = std::search(buffer, buffer + size, searchBytes, searchBytes + searchSize);
-    if (pos != buffer + size) {
-        std::copy(newBytes, newBytes + newSize, pos);
+    for (size_t i = 0; i <= size - searchSize; ++i) { 
+        bool match = true;
+        for (size_t j = 0; j < searchSize; ++j) {
+            if (mask[j] == 1 && buffer[i + j] != searchBytes[j]) {
+                match = false;
+                break;
+            }
+        }
+        if (match) {
+            std::copy(newBytes, newBytes + newSize, buffer + i);
 
-        dllFile.seekp(pos - buffer, std::ios::beg);
-        dllFile.write(newBytes, newSize);
-        std::wcout << L"字节序列已成功替换。" << std::endl;
-    }
-    else {
-        std::wcout << L"未找到指定的字节序列。" << std::endl;
+            dllFile.seekp(i, std::ios::beg);
+            dllFile.write(newBytes, newSize);
+            //std::wcout << L"字节序列已成功替换。" << std::endl;
+            break;
+        }
     }
 
-    delete[] buffer;
-    dllFile.close();
+	delete[] buffer;
+	dllFile.close();
 }
 
 static HMODULE WINAPI newLoadLibraryExW(LPCWSTR lpLibFileName, HANDLE hFile, DWORD  dwFlags) {
-    wprintf(L"Load DLL: %s\n", lpLibFileName);
+    //wprintf(L"Load DLL: %s\n", lpLibFileName);
     std::wstring libFileName(lpLibFileName);
     if (libFileName.find(L"appdata\\local\\temp") != std::wstring::npos) {
         //wprintf(L"Modify DLL: %s\n", lpLibFileName);
@@ -105,7 +129,7 @@ static VOID StartHook() {
     DetourTransactionCommit();
 }
 
-static BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
     switch (ul_reason_for_call) {
     case DLL_PROCESS_ATTACH:
         /*
