@@ -1,7 +1,8 @@
 # Fuck Cxdec Check
 
 ## Function
-A general patch used to bypass the exe integrity detection of krkrz engine in recent years.
+A general patch used to bypass the exe integrity detection of krkrz engine in recent years.  
+Also disable dynamic base address.
 
 ![cxdec](001.png)
 

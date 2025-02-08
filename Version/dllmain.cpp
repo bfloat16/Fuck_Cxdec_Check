@@ -20,6 +20,10 @@ static void ModifyDll(const std::wstring& path) {
         //std::wcerr << L"无法打开文件: " << path << std::endl;
         return;
     }
+    // 禁用动态基址
+    dllFile.seekp(326, std::ios::beg);
+    char zeroByte = 0x00;
+    dllFile.write(&zeroByte, 1);
 
     dllFile.seekg(0, std::ios::end);
     size_t size = dllFile.tellg();
@@ -70,19 +74,19 @@ static void ModifyDll(const std::wstring& path) {
         0x55,                          // push ebp
         0x8B, 0xEC,                    // mov ebp, esp
         0x8B, 0x4D, 0x08,              // mov ecx, dword ptr ss:[ebp+0x08]
-        0x85, 0xC9,					   // test ecx, ecx
-        0xEB, 0x13, 				   // jmp short 0x13 <===== Force Jump
-        0xFF, 0x75, 0x10,			   // push dword ptr ss:[ebp+0x10]
-        0xFF, 0x75, 0x0C,			   // push dword ptr ss:[ebp+0x0C]
+        0x85, 0xC9,                    // test ecx, ecx
+        0xEB, 0x13,                    // jmp short 0x13 <===== Force Jump
+        0xFF, 0x75, 0x10,              // push dword ptr ss:[ebp+0x10]
+        0xFF, 0x75, 0x0C,              // push dword ptr ss:[ebp+0x0C]
         0xE8, 0x3B, 0x0F, 0x00, 0x00,  // call 0x0000C0F0
-        0x84, 0xC0,					   // test al, al
-        0x74, 0x04,					   // je short 0x04
-        0xB0, 0x01,					   // mov al, 0x01
-        0x5D,						   // pop ebp
-        0xC3,						   // ret
-        0xB0, 0x01,					   // mov al, 0x01   <===== Force bypass
-        0x5D,						   // pop ebp
-        0xC3 						   // ret
+        0x84, 0xC0,                    // test al, al
+        0x74, 0x04,                    // je short 0x04
+        0xB0, 0x01,                    // mov al, 0x01
+        0x5D,                          // pop ebp
+        0xC3,                          // ret
+        0xB0, 0x01,                    // mov al, 0x01   <===== Force bypass
+        0x5D,                          // pop ebp
+        0xC3                           // ret
     };
     size_t newSize = sizeof(newBytes) / sizeof(char);
 
